@@ -216,7 +216,7 @@ export function FaceVerification() {
               <div className="relative aspect-square overflow-hidden rounded-lg bg-black">
                 {!capturedImage ? (
                   <>
-                    <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
+                    <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover scale-x-[-1]" />
                     {/* Face guide frame overlay */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="relative h-40 w-32 sm:h-48 sm:w-40">
