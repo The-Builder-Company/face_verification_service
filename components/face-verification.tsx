@@ -134,9 +134,8 @@ export function FaceVerification() {
     if (redirectTo) {
       router.push(redirectTo)
     } else {
-      // Default behavior if no redirect URL is provided
-      // You might want to redirect to a dashboard or home page
-      router.push("/")
+      // Default redirect to merchant dashboard
+      window.location.href = "http://merchant.heydollr.app/dashboard"
     }
   }
 
