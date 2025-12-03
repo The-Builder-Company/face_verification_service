@@ -7,12 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useFaceDetection } from "@/hooks/use-face-detection"
 
-type Step = "intro" | "camera" | "success"
+type Step = "intro" | "camera" | "success" | "error"
+
+// Default callback URL if none provided
+const DEFAULT_CALLBACK_URL = "https://merchant.heydollr.app/auth/verification-callback"
 
 export function FaceVerification() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const redirectTo = searchParams.get("redirectTo")
+  
+  // Get token and callback from URL params
+  const token = searchParams.get("token")
+  const callbackUrl = searchParams.get("callback") || DEFAULT_CALLBACK_URL
   
   const { 
     videoRef, 
@@ -29,6 +35,20 @@ export function FaceVerification() {
   const [isCapturing, setIsCapturing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [verificationResult, setVerificationResult] = useState<{
+    verificationId?: number;
+    userId?: number;
+    status?: string;
+    reason?: string;
+  } | null>(null)
+
+  // Check for token on mount
+  useEffect(() => {
+    if (!token) {
+      setErrorMessage("Missing authentication token. Please return to the app and try again.")
+      setStep("error")
+    }
+  }, [token])
 
   useEffect(() => {
     let mounted = true
@@ -101,29 +121,45 @@ export function FaceVerification() {
   }
 
   const handleSubmit = async () => {
-    if (!capturedImage) return
+    if (!capturedImage || !token) return
 
     setIsSubmitting(true)
+    setErrorMessage("")
+    
     try {
       const response = await fetch('/api/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ image: capturedImage }),
+        body: JSON.stringify({ 
+          image: capturedImage,
+          token: token,
+        }),
       })
 
-      if (!response.ok) {
-        throw new Error('Verification failed')
-      }
-
       const data = await response.json()
+      
       if (data.success) {
+        setVerificationResult({
+          verificationId: data.verificationId,
+          userId: data.userId,
+          status: 'success',
+        })
         setStep("success")
       } else {
-        throw new Error(data.message || 'Verification failed')
+        setVerificationResult({
+          userId: data.userId,
+          status: 'failed',
+          reason: data.error || 'Verification failed',
+        })
+        setErrorMessage(data.error || "Verification failed. Please try again.")
       }
     } catch (error) {
+      setVerificationResult({
+        status: 'failed',
+        reason: 'Network error',
+      })
       setErrorMessage("Verification failed. Please try again.")
     } finally {
       setIsSubmitting(false)
@@ -131,18 +167,69 @@ export function FaceVerification() {
   }
 
   const handleContinue = () => {
-    if (redirectTo) {
-      router.push(redirectTo)
-    } else {
-      // Default redirect to merchant dashboard
-      window.location.href = "http://merchant.heydollr.app/dashboard"
+    // Build callback URL with verification result
+    const url = new URL(callbackUrl)
+    
+    if (verificationResult) {
+      url.searchParams.set('status', verificationResult.status || 'success')
+      
+      if (verificationResult.userId) {
+        url.searchParams.set('user_id', verificationResult.userId.toString())
+      }
+      
+      if (verificationResult.verificationId) {
+        url.searchParams.set('verification_id', verificationResult.verificationId.toString())
+      }
     }
+    
+    // Redirect to callback URL
+    window.location.href = url.toString()
   }
 
   const handleReset = () => {
     setStep("intro")
     setCapturedImage(null)
     setErrorMessage("")
+  }
+
+  const handleGoBack = () => {
+    // Redirect back with failed status
+    const url = new URL(callbackUrl)
+    url.searchParams.set('status', 'failed')
+    url.searchParams.set('reason', 'user_cancelled')
+    window.location.href = url.toString()
+  }
+
+  // Error state - no token
+  if (step === "error") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-6 sm:py-8">
+        <div className="mx-auto w-full max-w-sm">
+          <Card className="space-y-6 border-0 shadow-lg">
+            <div className="space-y-4 px-4 pt-6 sm:px-6">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-red-100 p-4">
+                  <AlertCircle className="h-12 w-12 text-red-500" />
+                </div>
+              </div>
+              <div className="space-y-2 text-center">
+                <h1 className="text-xl font-bold text-foreground">Authentication Required</h1>
+                <p className="text-sm text-muted-foreground">{errorMessage}</p>
+              </div>
+            </div>
+            <div className="px-4 pb-6 sm:px-6">
+              <Button
+                onClick={handleGoBack}
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
+                size="lg"
+              >
+                Return to App
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
