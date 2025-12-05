@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const { image, token } = parsed.data;
 
     // Validate token and extract user info
-    const tokenResult = await validateAndExtractToken(token);
+    const tokenResult = validateAndExtractToken(token);
     
     if (!tokenResult.valid || !tokenResult.userId) {
       return NextResponse.json(

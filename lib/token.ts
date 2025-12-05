@@ -1,10 +1,4 @@
-/**
- * Token utilities for handling JWT handoff tokens
- */
 
-import * as jose from 'jose';
-
-const DOLLR_JWT_SECRET = process.env.DOLLR_JWT_SECRET;
 
 export interface TokenPayload {
   user_id: number;
@@ -20,27 +14,8 @@ export interface TokenPayload {
 }
 
 /**
- * Verify and decode a JWT token using the secret
- * Falls back to decode-only if no secret is configured (dev mode)
- */
-export async function verifyToken(token: string): Promise<TokenPayload | null> {
-  try {
-    if (DOLLR_JWT_SECRET) {
-      const secret = new TextEncoder().encode(DOLLR_JWT_SECRET);
-      const { payload } = await jose.jwtVerify(token, secret);
-      return payload as unknown as TokenPayload;
-    } else {
-      console.warn('DOLLR_JWT_SECRET not set - falling back to decode without verification');
-      return decodeToken(token);
-    }
-  } catch (error) {
-    console.error('Failed to verify token:', error);
-    return null;
-  }
-}
-
-/**
- * Decode a JWT token without verification (for dev/fallback only)
+ * Decode a JWT token to extract payload
+ * Token validity is verified by the Dollr API when used as Bearer auth
  */
 export function decodeToken(token: string): TokenPayload | null {
   try {
@@ -102,18 +77,19 @@ export function getUserIdFromToken(payload: TokenPayload): number | null {
 }
 
 /**
- * Validate token and extract user context (async - verifies signature)
+ * Validate token and extract user context
+ * Token validity is verified by Dollr API when used as Bearer auth
  */
-export async function validateAndExtractToken(token: string): Promise<{
+export function validateAndExtractToken(token: string): {
   valid: boolean;
   payload?: TokenPayload;
   userId?: number;
   error?: string;
-}> {
-  const payload = await verifyToken(token);
+} {
+  const payload = decodeToken(token);
   
   if (!payload) {
-    return { valid: false, error: 'Invalid token format or signature' };
+    return { valid: false, error: 'Invalid token format' };
   }
   
   if (isTokenExpired(payload)) {
