@@ -2,6 +2,10 @@
  * Token utilities for handling JWT handoff tokens
  */
 
+import * as jose from 'jose';
+
+const DOLLR_JWT_SECRET = process.env.DOLLR_JWT_SECRET;
+
 export interface TokenPayload {
   user_id: number;
   phone?: string;
@@ -16,8 +20,27 @@ export interface TokenPayload {
 }
 
 /**
- * Decode a JWT token without verification
- * Note: For production, you should verify the signature with the secret
+ * Verify and decode a JWT token using the secret
+ * Falls back to decode-only if no secret is configured (dev mode)
+ */
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
+  try {
+    if (DOLLR_JWT_SECRET) {
+      const secret = new TextEncoder().encode(DOLLR_JWT_SECRET);
+      const { payload } = await jose.jwtVerify(token, secret);
+      return payload as unknown as TokenPayload;
+    } else {
+      console.warn('DOLLR_JWT_SECRET not set - falling back to decode without verification');
+      return decodeToken(token);
+    }
+  } catch (error) {
+    console.error('Failed to verify token:', error);
+    return null;
+  }
+}
+
+/**
+ * Decode a JWT token without verification (for dev/fallback only)
  */
 export function decodeToken(token: string): TokenPayload | null {
   try {
@@ -79,18 +102,18 @@ export function getUserIdFromToken(payload: TokenPayload): number | null {
 }
 
 /**
- * Validate token and extract user context
+ * Validate token and extract user context (async - verifies signature)
  */
-export function validateAndExtractToken(token: string): {
+export async function validateAndExtractToken(token: string): Promise<{
   valid: boolean;
   payload?: TokenPayload;
   userId?: number;
   error?: string;
-} {
-  const payload = decodeToken(token);
+}> {
+  const payload = await verifyToken(token);
   
   if (!payload) {
-    return { valid: false, error: 'Invalid token format' };
+    return { valid: false, error: 'Invalid token format or signature' };
   }
   
   if (isTokenExpired(payload)) {

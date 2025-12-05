@@ -4,19 +4,17 @@
  */
 
 const DOLLR_API_BASE_URL = process.env.DOLLR_API_BASE_URL || 'https://dollr-api-2crdudxdoq-bq.a.run.app';
+const API_VERSION = 'v1';
 
 export interface UploadKYCDocResponse {
-  doc_url: string;
+  photo_url: string;
 }
 
 export interface CreateKYCResponse {
   id: number;
-  doc_type: string;
-  doc_url: string;
-  doc_number: string;
-  status: string;
-  is_approved: boolean;
+  photo_url: string;
   user_id: number;
+  status: string;
 }
 
 export interface KYCUploadResult {
@@ -45,7 +43,7 @@ function base64ToBlob(base64: string, mimeType: string = 'image/jpeg'): Blob {
 
 /**
  * Upload selfie image to Dollr KYC service
- * POST /v1/compliance/upload/kyc/doc
+ * POST /{version}/compliance/individual-verification/photo/upload
  */
 export async function uploadKYCDocument(
   imageBase64: string,
@@ -55,7 +53,7 @@ export async function uploadKYCDocument(
   const formData = new FormData();
   formData.append('file', blob, `selfie-${Date.now()}.jpg`);
 
-  const response = await fetch(`${DOLLR_API_BASE_URL}/v1/compliance/upload/kyc/doc`, {
+  const response = await fetch(`${DOLLR_API_BASE_URL}/${API_VERSION}/compliance/individual-verification/photo/upload`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${authToken}`,
@@ -72,27 +70,22 @@ export async function uploadKYCDocument(
 }
 
 /**
- * Create KYC record with uploaded document
- * POST /v1/compliance/kyc/create
+ * Create KYC photo record with uploaded photo URL
+ * POST /{version}/compliance/individual-verification/photo/create
  */
 export async function createKYCRecord(
-  docUrl: string,
+  photoUrl: string,
   userId: number,
-  authToken: string,
-  docType: string = 'selfie'
+  authToken: string
 ): Promise<CreateKYCResponse> {
-  const docNumber = `SELFIE-${userId}-${Date.now()}`;
-
-  const response = await fetch(`${DOLLR_API_BASE_URL}/v1/compliance/kyc/create`, {
+  const response = await fetch(`${DOLLR_API_BASE_URL}/${API_VERSION}/compliance/individual-verification/photo/create`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${authToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      doc_type: docType,
-      doc_url: docUrl,
-      doc_number: docNumber,
+      photo_url: photoUrl,
     }),
   });
 
@@ -118,20 +111,20 @@ export async function completeKYCVerification(
     // Step 1: Upload the selfie image
     const uploadResult = await uploadKYCDocument(imageBase64, authToken);
     
-    if (!uploadResult.doc_url) {
-      throw new Error('No document URL returned from upload');
+    if (!uploadResult.photo_url) {
+      throw new Error('No photo URL returned from upload');
     }
 
     // Step 2: Create KYC record
     const kycRecord = await createKYCRecord(
-      uploadResult.doc_url,
+      uploadResult.photo_url,
       userId,
       authToken
     );
 
     return {
       success: true,
-      docUrl: uploadResult.doc_url,
+      docUrl: uploadResult.photo_url,
       kycId: kycRecord.id,
     };
   } catch (error) {

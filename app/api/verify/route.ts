@@ -1,28 +1,31 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { completeKYCVerification } from '@/lib/dollr-api';
 import { validateAndExtractToken } from '@/lib/token';
+
+const VerifyRequestSchema = z.object({
+  image: z.string().min(1, 'Image data is required'),
+  token: z.string().min(1, 'Authentication token is required'),
+});
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { image, token } = body;
-
-    if (!image) {
+    
+    // Validate input with Zod
+    const parsed = VerifyRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const errors = parsed.error.errors.map(e => e.message).join(', ');
       return NextResponse.json(
-        { success: false, error: 'Image data is required' },
-        { status: 400 }
+        { success: false, error: errors },
+        { status: 422 }
       );
     }
-
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication token is required' },
-        { status: 400 }
-      );
-    }
+    
+    const { image, token } = parsed.data;
 
     // Validate token and extract user info
-    const tokenResult = validateAndExtractToken(token);
+    const tokenResult = await validateAndExtractToken(token);
     
     if (!tokenResult.valid || !tokenResult.userId) {
       return NextResponse.json(
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Complete KYC verification with Dollr API
+    // Complete KYC verification 
     const kycResult = await completeKYCVerification(
       image,
       tokenResult.userId,
