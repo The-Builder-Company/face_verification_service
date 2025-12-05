@@ -3,7 +3,7 @@
  * Handles communication with the Dollr backend for KYC operations
  */
 
-const DOLLR_API_BASE_URL = process.env.DOLLR_API_BASE_URL || 'https://dollr-api-2crdudxdoq-bq.a.run.app';
+const DOLLR_API_BASE_URL = process.env.DOLLR_API_BASE_URL || 'https://dollr-api-35531319888.africa-south1.run.app';
 const API_VERSION = 'v1';
 
 export interface UploadPhotoResponse {
