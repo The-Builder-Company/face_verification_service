@@ -167,23 +167,8 @@ export function FaceVerification() {
   }
 
   const handleContinue = () => {
-    // Build callback URL with verification result
-    const url = new URL(callbackUrl)
-    
-    if (verificationResult) {
-      url.searchParams.set('status', verificationResult.status || 'success')
-      
-      if (verificationResult.userId) {
-        url.searchParams.set('user_id', verificationResult.userId.toString())
-      }
-      
-      if (verificationResult.verificationId) {
-        url.searchParams.set('verification_id', verificationResult.verificationId.toString())
-      }
-    }
-    
-    // Redirect to callback URL
-    window.location.href = url.toString()
+    // Redirect to merchant dashboard
+    window.location.assign("https://merchant.heydollr.app/dashboard")
   }
 
   const handleReset = () => {
@@ -194,10 +179,15 @@ export function FaceVerification() {
 
   const handleGoBack = () => {
     // Redirect back with failed status
-    const url = new URL(callbackUrl)
-    url.searchParams.set('status', 'failed')
-    url.searchParams.set('reason', 'user_cancelled')
-    window.location.href = url.toString()
+    try {
+      const url = new URL(callbackUrl)
+      url.searchParams.set('status', 'failed')
+      url.searchParams.set('reason', 'user_cancelled')
+      window.location.href = url.toString()
+    } catch (error) {
+      // Fallback to default dashboard if callback is invalid
+      window.location.href = "https://merchant.heydollr.app/dashboard"
+    }
   }
 
   // Error state - no token
@@ -431,6 +421,7 @@ export function FaceVerification() {
 
               {/* Continue button */}
               <Button
+                type="button"
                 onClick={handleContinue}
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                 size="lg"

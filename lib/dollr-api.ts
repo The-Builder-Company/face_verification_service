@@ -1,7 +1,4 @@
-/**
- * Dollr API Service
- * Handles communication with the Dollr backend for KYC operations
- */
+
 
 const DOLLR_API_BASE_URL = process.env.DOLLR_API_BASE_URL || 'https://dollr-api-35531319888.africa-south1.run.app';
 const API_VERSION = 'v1';
@@ -28,7 +25,7 @@ export interface KYCUploadResult {
  * Convert base64 image to Blob for file upload
  */
 function base64ToBlob(base64: string, mimeType: string = 'image/jpeg'): Blob {
-  // Remove data URL prefix if present
+  
   const base64Data = base64.replace(/^data:image\/\w+;base64,/, '');
   const byteCharacters = atob(base64Data);
   const byteNumbers = new Array(byteCharacters.length);
@@ -107,14 +104,14 @@ export async function completeKYCVerification(
   authToken: string
 ): Promise<KYCUploadResult> {
   try {
-    // Step 1: Upload the selfie image
+    // Upload selfie/photo
     const uploadResult = await uploadSelfiePhoto(imageBase64, authToken);
     
     if (!uploadResult.photo_url) {
       throw new Error('No photo URL returned from upload');
     }
 
-    // Step 2: Create photo record
+    // Create photo record
     const photoRecord = await createPhotoRecord(
       uploadResult.photo_url,
       authToken
