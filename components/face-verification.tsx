@@ -168,7 +168,7 @@ export function FaceVerification() {
 
   const handleContinue = () => {
     // Redirect to merchant dashboard
-    window.location.assign("https://merchant.heydollr.app/dashboard")
+    window.location.assign("https://merchant.heydollr.app/dashboard/micro-org")
   }
 
   const handleReset = () => {
@@ -186,7 +186,7 @@ export function FaceVerification() {
       window.location.href = url.toString()
     } catch (error) {
       // Fallback to default dashboard if callback is invalid
-      window.location.href = "https://merchant.heydollr.app/dashboard"
+      window.location.href = "https://merchant.heydollr.app/dashboard/micro-org"
     }
   }
 
